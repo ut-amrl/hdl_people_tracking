@@ -2,12 +2,11 @@
 
 import rospy
 import roslib
-NODE_NAME = 'hdl_people_tracking'
+NODE_NAME = 'ToHumanState'
 roslib.load_manifest(NODE_NAME)
 from amrl_msgs.msg import HumanStateMsg
 from amrl_msgs.msg import HumanStateArrayMsg
 from hdl_people_tracking.msg import TrackArray
-
 
 human_pub = rospy.Publisher("human_states", HumanStateArrayMsg)
 
