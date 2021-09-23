@@ -11,7 +11,7 @@
     <param name="backsub_resolution" value="0.2"/>
     <param name="backsub_occupancy_thresh" value="2"/>
     <!-- clustering params -->
-    <param name="cluster_min_pts" value="10"/>
+    <param name="cluster_min_pts" value="20"/>
     <param name="cluster_max_pts" value="2048"/>
     <param name="cluster_min_size_x" value="0.2"/>
     <param name="cluster_min_size_y" value="0.2"/>
