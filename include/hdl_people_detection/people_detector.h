@@ -2,7 +2,7 @@
 #define PEOPLE_DETECTOR_H
 
 #include <memory>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -21,7 +21,7 @@ namespace hdl_people_detection {
  */
 class PeopleDetector {
 public:
-  PeopleDetector(ros::NodeHandle& nh);
+  PeopleDetector(rclcpp::Node* node);
   ~PeopleDetector();
 
   std::vector<Cluster::Ptr> detect(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& cloud) const;

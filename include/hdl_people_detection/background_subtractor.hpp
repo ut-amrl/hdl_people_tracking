@@ -6,7 +6,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/msg/marker.hpp>
+
+#include <rclcpp/rclcpp.hpp>
 
 namespace hdl_people_detection {
 
@@ -57,7 +59,7 @@ public:
 
     Eigen::Array3f extents = (max_pos - min_pos).array().abs();
     grid_size = (extents * inverse_voxel_size.array()).unaryExpr([=](float v) { return ceil(v); }).cast<int>();
-    occupancy_map.resize(grid_size[0] * grid_size[1] * grid_size[2]);
+    occupancy_map.resize(int(grid_size[0] * grid_size[1] * grid_size[2]));
 
     addBackgroundCloud(bg_cloud);
   }
@@ -133,14 +135,14 @@ public:
    * @note  It seems rviz cannot deal with markers with very many primitives, so this method may not work well
    * @return
    */
-  visualization_msgs::MarkerConstPtr create_voxel_marker() const {
-    visualization_msgs::MarkerPtr marker(new visualization_msgs::Marker());
-    marker->header.stamp = ros::Time(0);
+  visualization_msgs::msg::Marker::ConstSharedPtr create_voxel_marker() const {
+    visualization_msgs::msg::Marker::SharedPtr marker(new visualization_msgs::msg::Marker());
+    marker->header.stamp = rclcpp::Time(0, 0);
     marker->header.frame_id = frame_id;
-    marker->action = visualization_msgs::Marker::ADD;
-    marker->lifetime = ros::Duration(0);
+    marker->action = visualization_msgs::msg::Marker::ADD;
+    marker->lifetime = rclcpp::Duration(0, 0);
     marker->ns = "backsub_voxels";
-    marker->type = visualization_msgs::Marker::CUBE_LIST;
+    marker->type = visualization_msgs::msg::Marker::CUBE_LIST;
 
     marker->pose.orientation.w = 1.0;
 
@@ -165,7 +167,7 @@ public:
 
       Eigen::Array3f pt = Eigen::Array3f(x, y, z) * voxel_size + min_pos + voxel_size * 0.5f;
 
-      geometry_msgs::Point point;
+      geometry_msgs::msg::Point point;
       point.x = pt.x();
       point.y = pt.y();
       point.z = pt.z();

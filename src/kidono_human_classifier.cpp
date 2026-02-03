@@ -1,6 +1,6 @@
 #include <hdl_people_detection/kidono_human_classifier.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <hdl_people_detection/kidono_feature_extractor.hpp>
 
 
@@ -13,15 +13,15 @@ KidonoHumanClassifier::KidonoHumanClassifier(const std::string &modelfile, const
     boost = cv::Ptr<cv::Boost>(new cv::Boost());
     boost->load(modelfile.c_str());
     if(!boost->get_data()) {
-      ROS_ERROR("failed to read boost model!!");
-      ROS_ERROR("boost disabled");
+      RCLCPP_ERROR(rclcpp::get_logger("KidonoHumanClassifier"), "failed to read boost model!!");
+      RCLCPP_ERROR(rclcpp::get_logger("KidonoHumanClassifier"), "boost disabled");
       boost.release();
     }
 #else
-    boost = cv::ml::Boost::load<cv::ml::Boost>(modelfile);
+    boost = cv::ml::Boost::load(modelfile);
     if(boost->empty()) {
-      ROS_ERROR("failed to read boost model!!");
-      ROS_ERROR("boost disabled");
+      RCLCPP_ERROR(rclcpp::get_logger("KidonoHumanClassifier"), "failed to read boost model!!");
+      RCLCPP_ERROR(rclcpp::get_logger("KidonoHumanClassifier"), "boost disabled");
       boost.release();
     }
 #endif

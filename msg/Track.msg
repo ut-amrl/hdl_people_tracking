@@ -6,4 +6,4 @@ geometry_msgs/Vector3 vel
 float64[9] pos_cov
 float64[9] vel_cov
 
-hdl_people_tracking/Cluster[] associated
+Cluster[] associated

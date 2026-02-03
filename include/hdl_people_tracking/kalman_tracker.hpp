@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <boost/any.hpp>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <kkl/math/gaussian.hpp>
 #include <kkl/alg/kalman_filter.hpp>
@@ -25,7 +25,7 @@ public:
    * @param init_pos      initial position
    * @param associated    associated detection
    */
-  KalmanTracker(long id, const ros::Time& time, const Eigen::Vector3d& init_pos, boost::any associated = boost::any())
+  KalmanTracker(long id, const rclcpp::Time& time, const Eigen::Vector3d& init_pos, boost::any associated = boost::any())
     : id_(id),
       correction_count(0),
       init_time(time),
@@ -59,8 +59,8 @@ public:
    * @brief predict the current state
    * @param time    current time
    */
-  void predict(const ros::Time& time) {
-    double difftime = (time - last_prediction_time).toSec();
+  void predict(const rclcpp::Time& time) {
+    double difftime = (time - last_prediction_time).seconds();
     difftime = std::max(0.001, difftime);
 
     kalman_filter->transitionMatrix(0, 3) = difftime;
@@ -79,7 +79,7 @@ public:
    * @param pos     observed position
    * @param associated   associated detection
    */
-  void correct(const ros::Time& time, const Eigen::Vector3d& pos, boost::any associated = boost::any()) {
+  void correct(const rclcpp::Time& time, const Eigen::Vector3d& pos, boost::any associated = boost::any()) {
     kalman_filter->correct(pos);
 
     correction_count++;
@@ -92,11 +92,11 @@ public:
     return id_;
   }
 
-  ros::Duration age(const ros::Time& time) const {
+  rclcpp::Duration age(const rclcpp::Time& time) const {
     return (time - init_time);
   }
 
-  const ros::Time& lastCorrectionTime() const {
+  const rclcpp::Time& lastCorrectionTime() const {
     return last_correction_time;
   }
 
@@ -135,9 +135,9 @@ private:
   long id_;
 
   int correction_count;
-  ros::Time init_time;              // time when the tracker was initialized
-  ros::Time last_prediction_time;   // tiem when prediction was performed
-  ros::Time last_correction_time;   // time when correction was performed
+  rclcpp::Time init_time;              // time when the tracker was initialized
+  rclcpp::Time last_prediction_time;   // tiem when prediction was performed
+  rclcpp::Time last_correction_time;   // time when correction was performed
 
   boost::any last_associated;       // associated detection data
 

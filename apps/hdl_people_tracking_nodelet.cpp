@@ -3,81 +3,80 @@
 #include <iostream>
 #include <boost/format.hpp>
 
-#include <ros/ros.h>
-#include <pcl_ros/point_cloud.h>
-#include <tf_conversions/tf_eigen.h>
-#include <tf/transform_broadcaster.h>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_components/register_node_macro.hpp>
+
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <pcl/filters/filter.h>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-
-#include <nodelet/nodelet.h>
-#include <pluginlib/class_list_macros.h>
-
-#include <visualization_msgs/MarkerArray.h>
-#include <hdl_people_tracking/TrackArray.h>
-#include <hdl_people_tracking/ClusterArray.h>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <hdl_people_tracking/msg/track_array.hpp>
+#include <hdl_people_tracking/msg/cluster_array.hpp>
 
 #include <kkl/cvk/cvutils.hpp>
 #include <hdl_people_tracking/people_tracker.hpp>
 
 namespace hdl_people_tracking {
 
-class HdlPeopleTrackingNodelet : public nodelet::Nodelet {
+class HdlPeopleTrackingNode : public rclcpp::Node {
 public:
   using PointT = pcl::PointXYZI;
 
-  HdlPeopleTrackingNodelet() {}
-  virtual ~HdlPeopleTrackingNodelet() {}
-
-  void onInit() override {
-    nh = getNodeHandle();
-    mt_nh = getMTNodeHandle();
-    private_nh = getPrivateNodeHandle();
-
-    tracker.reset(new PeopleTracker(private_nh));
+  HdlPeopleTrackingNode(const rclcpp::NodeOptions& options) : Node("hdl_people_tracking_node", options) {
+    tracker.reset(new PeopleTracker(this));
+    // kkl::cvk::create_color_palette might need checking. 
+    // Assuming kkl is available as it was for classifier.
     color_palette = cvk::create_color_palette(16);
 
-    tracks_pub = private_nh.advertise<hdl_people_tracking::TrackArray>("tracks", 10);
-    marker_pub = private_nh.advertise<visualization_msgs::MarkerArray>("markers", 10);
-    clusters_sub = nh.subscribe("/hdl_people_detection_nodelet/clusters", 1, &HdlPeopleTrackingNodelet::callback, this);
+    tracks_pub = this->create_publisher<hdl_people_tracking::msg::TrackArray>("tracks", 10);
+    marker_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("markers", 10);
+    clusters_sub = this->create_subscription<hdl_people_tracking::msg::ClusterArray>(
+      "clusters", 1, std::bind(&HdlPeopleTrackingNode::callback, this, std::placeholders::_1));
   }
+
+  virtual ~HdlPeopleTrackingNode() {}
 
 private:
 
-  void callback(const hdl_people_tracking::ClusterArrayPtr& clusters_msg) {
-    // remove non-human detections
-    auto remove_loc = std::remove_if(clusters_msg->clusters.begin(), clusters_msg->clusters.end(), [=](const Cluster& cluster) { return !cluster.is_human; });
-    clusters_msg->clusters.erase(remove_loc, clusters_msg->clusters.end());
+  void callback(const hdl_people_tracking::msg::ClusterArray::ConstSharedPtr clusters_msg) {
+    // Filter non-human clusters
+    std::vector<hdl_people_tracking::msg::Cluster> clusters;
+    clusters.reserve(clusters_msg->clusters.size());
+    for(const auto& cluster : clusters_msg->clusters) {
+      if(cluster.is_human) {
+        clusters.push_back(cluster);
+      }
+    }
 
     // update people tracker
     tracker->predict(clusters_msg->header.stamp);
-    tracker->correct(clusters_msg->header.stamp, clusters_msg->clusters);
+    tracker->correct(clusters_msg->header.stamp, clusters);
 
     // publish tracks msg
-    if(tracks_pub.getNumSubscribers()) {
-      tracks_pub.publish(create_tracks_msg(clusters_msg->header));
+    if(tracks_pub->get_subscription_count() > 0) {
+      tracks_pub->publish(create_tracks_msg(clusters_msg->header));
     }
 
     // publish rviz markers
-    if(marker_pub.getNumSubscribers()) {
-      marker_pub.publish(create_tracked_people_marker(clusters_msg->header));
+    if(marker_pub->get_subscription_count() > 0) {
+      marker_pub->publish(create_tracked_people_marker(clusters_msg->header));
     }
   }
 
-  hdl_people_tracking::TrackArrayConstPtr create_tracks_msg(const std_msgs::Header& header) const {
-    hdl_people_tracking::TrackArrayPtr tracks_msg(new hdl_people_tracking::TrackArray());
-    tracks_msg->header = header;
+  hdl_people_tracking::msg::TrackArray create_tracks_msg(const std_msgs::msg::Header& header) const {
+    hdl_people_tracking::msg::TrackArray tracks_msg;
+    tracks_msg.header = header;
 
-    tracks_msg->tracks.resize(tracker->people.size());
+    tracks_msg.tracks.resize(tracker->people.size());
     for(int i=0; i<tracker->people.size(); i++) {
       const auto& track = tracker->people[i];
-      auto& track_msg = tracks_msg->tracks[i];
+      auto& track_msg = tracks_msg.tracks[i];
 
       track_msg.id = track->id();
-      track_msg.age = (track->age(header.stamp)).toSec();
+      // track->age returns rclcpp::Duration, toSec() -> seconds()
+      track_msg.age = track->age(header.stamp).seconds();
       track_msg.pos.x = track->position().x();
       track_msg.pos.y = track->position().y();
       track_msg.pos.z = track->position().z();
@@ -99,32 +98,30 @@ private:
         }
       }
 
-      const Cluster* associated = boost::any_cast<Cluster>(&track->lastAssociated());
-      if(!associated) {
-        continue;
+      const hdl_people_tracking::msg::Cluster* associated = boost::any_cast<hdl_people_tracking::msg::Cluster>(&track->lastAssociated());
+      if(associated) {
+        track_msg.associated.resize(1);
+        track_msg.associated[0] = (*associated);
       }
-
-      track_msg.associated.resize(1);
-      track_msg.associated[0] = (*associated);
     }
 
     return tracks_msg;
   }
 
-  visualization_msgs::MarkerArrayConstPtr create_tracked_people_marker(const std_msgs::Header& header) const {
-    visualization_msgs::MarkerArrayPtr markers_ptr(new visualization_msgs::MarkerArray());
+  visualization_msgs::msg::MarkerArray create_tracked_people_marker(const std_msgs::msg::Header& header) const {
+    visualization_msgs::msg::MarkerArray markers;
 
-    visualization_msgs::MarkerArray& markers = *markers_ptr;
-    markers.markers.reserve(tracker->people.size() + 1);
-    markers.markers.resize(1);
+    if (tracker->people.empty()) {
+        return markers;
+    }
 
-    visualization_msgs::Marker& boxes = markers.markers[0];
+    visualization_msgs::msg::Marker boxes;
     boxes.header = header;
-    boxes.action = visualization_msgs::Marker::ADD;
-    boxes.lifetime = ros::Duration(1.0);
+    boxes.action = visualization_msgs::msg::Marker::ADD;
+    boxes.lifetime = rclcpp::Duration::from_seconds(1.0);
 
     boxes.ns = "boxes";
-    boxes.type = visualization_msgs::Marker::CUBE_LIST;
+    boxes.type = visualization_msgs::msg::Marker::CUBE_LIST;
     boxes.colors.reserve(tracker->people.size());
     boxes.points.reserve(tracker->people.size());
 
@@ -143,26 +140,26 @@ private:
         continue;
       }
 
-      std_msgs::ColorRGBA rgba;
+      std_msgs::msg::ColorRGBA rgba;
       rgba.r = color[2] / 255.0;
       rgba.g = color[1] / 255.0;
       rgba.b = color[0] / 255.0;
       rgba.a = 0.6f;
-      markers.markers[0].colors.push_back(rgba);
+      boxes.colors.push_back(rgba);
 
-      geometry_msgs::Point point;
+      geometry_msgs::msg::Point point;
       point.x = person->position().x();
       point.y = person->position().y();
       point.z = person->position().z();
-      markers.markers[0].points.push_back(point);
+      boxes.points.push_back(point);
 
-      visualization_msgs::Marker text;
-      text.header = markers.markers[0].header;
-      text.action = visualization_msgs::Marker::ADD;
-      text.lifetime = ros::Duration(1.0);
+      visualization_msgs::msg::Marker text;
+      text.header = header;
+      text.action = visualization_msgs::msg::Marker::ADD;
+      text.lifetime = rclcpp::Duration::from_seconds(1.0);
 
       text.ns = (boost::format("text%d") % person->id()).str();
-      text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+      text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
       text.scale.z = 0.5;
 
       text.pose.position = point;
@@ -172,19 +169,18 @@ private:
 
       markers.markers.push_back(text);
     }
+    
+    if (!boxes.points.empty()) {
+       markers.markers.insert(markers.markers.begin(), boxes);
+    }
 
-    return markers_ptr;
+    return markers;
   }
 
 private:
-  // ROS
-  ros::NodeHandle nh;
-  ros::NodeHandle mt_nh;
-  ros::NodeHandle private_nh;
-
-  ros::Publisher tracks_pub;
-  ros::Publisher marker_pub;
-  ros::Subscriber clusters_sub;
+  rclcpp::Publisher<hdl_people_tracking::msg::TrackArray>::SharedPtr tracks_pub;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub;
+  rclcpp::Subscription<hdl_people_tracking::msg::ClusterArray>::SharedPtr clusters_sub;
 
   boost::circular_buffer<cv::Scalar> color_palette;
 
@@ -194,4 +190,4 @@ private:
 }
 
 
-PLUGINLIB_EXPORT_CLASS(hdl_people_tracking::HdlPeopleTrackingNodelet, nodelet::Nodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(hdl_people_tracking::HdlPeopleTrackingNode)
