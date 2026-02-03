@@ -191,7 +191,7 @@ private:
       clusters_msg.header.stamp = stamp;
 
       clusters_msg.clusters.resize(clusters.size());
-      for(int i=0; i<clusters.size(); i++) {
+      for(size_t i=0; i<clusters.size(); i++) {
         auto& cluster_msg = clusters_msg.clusters[i];
         cluster_msg.is_human = clusters[i]->is_human;
         cluster_msg.min_pt.x = clusters[i]->min_pt.x();
@@ -264,7 +264,7 @@ private:
   visualization_msgs::msg::MarkerArray create_markers(const rclcpp::Time& stamp, const std::vector<hdl_people_detection::Cluster::Ptr>& clusters) const {
     visualization_msgs::msg::MarkerArray markers;
     
-    for(int i=0; i<clusters.size(); i++) {
+    for(size_t i=0; i<clusters.size(); i++) {
       if(!clusters[i]->is_human) {
         continue;
       }

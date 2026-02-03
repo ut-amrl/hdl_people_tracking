@@ -46,7 +46,7 @@ public:
     pcl::PointCloud<pcl::PointXYZI>::Ptr scaled(new pcl::PointCloud<pcl::PointXYZI>());
     scaled->resize(cloud->size());
     Eigen::Array3f scale(1.0f, 1.0f, 0.01f);
-    for(int i=0; i<cloud->size(); i++) {
+    for(size_t i=0; i<cloud->size(); i++) {
       scaled->at(i).getArray3fMap() = cloud->at(i).getArray3fMap() * scale;
     }
     scaled->width = scaled->size();
@@ -60,7 +60,7 @@ public:
     // split and re-merge clusters to make each cluster contain only one person's points
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> detected;
     detected.reserve(candidate_clusters.size());
-    for (int i = 0; i < candidate_clusters.size(); i++) {
+    for (size_t i = 0; i < candidate_clusters.size(); i++) {
       pcl::PointIndices::Ptr indices(new pcl::PointIndices(candidate_clusters[i]));
       pcl::ExtractIndices<pcl::PointXYZI> extract;
       extract.setInputCloud(cloud);
@@ -88,14 +88,14 @@ public:
 private:
   bool isValid(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud) const {
     std::pair<Eigen::Array3f, Eigen::Array3f> minmax(cloud->front().getArray3fMap(), cloud->front().getArray3fMap());
-    for(int i=1; i<cloud->size(); i++) {
+    for(size_t i=1; i<cloud->size(); i++) {
       minmax.first = minmax.first.min(cloud->at(i).getArray3fMap());
       minmax.second = minmax.second.max(cloud->at(i).getArray3fMap());
     }
     Eigen::Array3f size = minmax.second - minmax.first;
     size.x() = size.y() = size.head<2>().matrix().norm();
 
-    return cloud->size() > min_pt && cloud->size() < max_pt && (size > min_size).all() && (size < max_size).all();
+    return cloud->size() > static_cast<size_t>(min_pt) && cloud->size() < static_cast<size_t>(max_pt) && (size > min_size).all() && (size < max_size).all();
   }
 
   // apply euclidean clustering
@@ -127,11 +127,11 @@ private:
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> splitted(dp_means.centroids.size());
-    for (int i = 0; i < splitted.size(); i++) {
+    for (size_t i = 0; i < splitted.size(); i++) {
       splitted[i].reset(new pcl::PointCloud<pcl::PointXYZI>);
     }
 
-    for (int i = 0; i < cloud->size(); i++) {
+    for (size_t i = 0; i < cloud->size(); i++) {
       pcl::PointXYZI pt = cloud->at(i);
       splitted[dp_means.labels[i]]->push_back(pt);
     }
@@ -157,8 +157,8 @@ private:
     std::vector<int> merge_to(clouds.size(), -1);
 
     float dist_thresh = 0.8f;
-    for (int i = 0; i < clouds.size(); i++) {
-      for (int j = i + 1; j < clouds.size(); j++) {
+    for (size_t i = 0; i < clouds.size(); i++) {
+      for (size_t j = i + 1; j < clouds.size(); j++) {
         if (!clouds[i] || !clouds[j]) {
           continue;
         }
@@ -176,7 +176,7 @@ private:
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> merged(clouds.size());
-    for (int i = 0; i < merge_to.size(); i++) {
+    for (size_t i = 0; i < merge_to.size(); i++) {
       if (merge_to[i] < 0) {
         merged[i] = clouds[i];
         continue;
@@ -214,9 +214,9 @@ private:
     float gap_thresh = 0.8f;
     int hist_size = 8;
     std::vector<int> hist(hist_size, 0);
-    for (int i = 0; i < on_major.size(); i++) {
+    for (size_t i = 0; i < on_major.size(); i++) {
       int n = (on_major[i] - min_val) / (max_val - min_val) * hist_size;
-      if (n >= 0 && n < hist.size()) {
+      if (n >= 0 && n < (int)hist.size()) {
         hist[n] ++;
       }
     }

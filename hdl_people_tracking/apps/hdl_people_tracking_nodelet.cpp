@@ -70,7 +70,7 @@ private:
     tracks_msg.header = header;
 
     tracks_msg.tracks.resize(tracker->people.size());
-    for(int i=0; i<tracker->people.size(); i++) {
+    for(size_t i=0; i<tracker->people.size(); i++) {
       const auto& track = tracker->people[i];
       auto& track_msg = tracks_msg.tracks[i];
 
@@ -132,7 +132,7 @@ private:
     boxes.scale.y = 0.5;
     boxes.scale.z = 1.2;
 
-    for(int i=0; i<tracker->people.size(); i++) {
+    for(size_t i=0; i<tracker->people.size(); i++) {
       const auto& person = tracker->people[i];
       const auto& color = color_palette[person->id() % color_palette.size()];
 

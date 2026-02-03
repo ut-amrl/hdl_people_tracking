@@ -75,7 +75,7 @@ private:
   pcl::PointCloud<pcl::PointXYZI>::Ptr centeredCloud(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& cloud, const Eigen::Vector3f& mean) const {
     pcl::PointCloud<pcl::PointXYZI>::Ptr centered_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     centered_cloud->resize(cloud->size());
-    for (int i = 0; i < cloud->size(); i++) {
+    for (size_t i = 0; i < cloud->size(); i++) {
       centered_cloud->at(i).getVector3fMap() = cloud->at(i).getVector3fMap() - mean;
       centered_cloud->at(i).intensity = cloud->at(i).intensity;
     }
@@ -88,7 +88,7 @@ private:
 
   float minimumDistance(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& cloud) const {
     float dist = cloud->front().getVector3fMap().squaredNorm();
-    for (int i = 1; i < cloud->size(); i++) {
+    for (size_t i = 1; i < cloud->size(); i++) {
       dist = std::min(dist, cloud->at(i).getVector3fMap().squaredNorm());
     }
     return sqrtf(dist);
@@ -111,7 +111,7 @@ private:
   std::vector<float> inertiaMoment3d(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& centered_cloud) const {
     std::vector<float> feature(6, 0.0f);
 
-    for (int i = 0; i < centered_cloud->size(); i++) {
+    for (size_t i = 0; i < centered_cloud->size(); i++) {
       const auto& pt = centered_cloud->at(i);
       feature[0] += square(pt.y) + square(pt.z);
       feature[1] += -pt.x * pt.y;
@@ -130,7 +130,7 @@ private:
     }
 
     Eigen::MatrixXf ptdata(cloud->size(), 2);
-    for (int i = 0; i < cloud->size(); i++) {
+    for (size_t i = 0; i < cloud->size(); i++) {
       ptdata(i, 0) = cloud->at(i).getVector3fMap().dot(e1);
       ptdata(i, 1) = cloud->at(i).getVector3fMap().dot(e2);
     }
@@ -146,7 +146,7 @@ private:
     return feature;
   }
 
-  std::vector<float> covarianceIn3zones(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& centered_cloud, const Eigen::Vector3f& e1, const Eigen::Vector3f& e2, const Eigen::Vector3f& e3) const {
+  std::vector<float> covarianceIn3zones(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& centered_cloud, const Eigen::Vector3f& e1, const Eigen::Vector3f& e2, const Eigen::Vector3f& /*e3*/) const {
     pcl::PointCloud<pcl::PointXYZI>::Ptr upper_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr lower_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr right_cloud(new pcl::PointCloud<pcl::PointXYZI>());
@@ -187,14 +187,14 @@ private:
 
   std::vector<float> histogram2d(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& cloud, const Eigen::Vector3f& axis1, const Eigen::Vector3f& axis2, int bin1, int bin2) const {
     std::vector<Eigen::Vector2f> pts2d(cloud->size());
-    for (int i = 0; i < cloud->size(); i++) {
+    for (size_t i = 0; i < cloud->size(); i++) {
       pts2d[i][0] = cloud->at(i).getVector3fMap().dot(axis1);
       pts2d[i][1] = cloud->at(i).getVector3fMap().dot(axis2);
     }
 
     Eigen::Array2f min_pt = pts2d.front();
     Eigen::Array2f max_pt = pts2d.front();
-    for (int i = 1; i < pts2d.size(); i++) {
+    for (size_t i = 1; i < pts2d.size(); i++) {
       min_pt = pts2d[i].array().min(min_pt);
       max_pt = pts2d[i].array().max(max_pt);
     }
@@ -204,7 +204,7 @@ private:
 
     float weight = 1.0f / pts2d.size();
     std::vector<float> hist(bin1 * bin2, 0.0f);
-    for (int i = 0; i < pts2d.size(); i++) {
+    for (size_t i = 0; i < pts2d.size(); i++) {
       Eigen::Array2i index = ((pts2d[i].array() - min_pt) * inv_size).cast<int>();
       hist[index[0] + index[1] * bin1] += weight;
     }
@@ -220,7 +220,7 @@ private:
     float e1_max = -9999.0f;
 
     std::vector<Eigen::Vector3f> aligned_cloud(centered_cloud->size());
-    for (int i = 0; i < centered_cloud->size(); i++) {
+    for (size_t i = 0; i < centered_cloud->size(); i++) {
       aligned_cloud[i] = cvt2eigenspace * centered_cloud->at(i).getVector3fMap();
       e1_min = std::min(e1_min, aligned_cloud[i][0]);
       e1_max = std::max(e1_max, aligned_cloud[i][0]);
@@ -236,7 +236,7 @@ private:
       max_pts[i] = Eigen::Array2f::Ones() * -9999.0f;
     }
 
-    for (int i = 0; i < aligned_cloud.size(); i++) {
+    for (size_t i = 0; i < aligned_cloud.size(); i++) {
       int n = static_cast<int>((aligned_cloud[i][0] - e1_min) * scale);
       min_pts[n] = min_pts[n].min(aligned_cloud[i].bottomLeftCorner(2, 1).array());
       max_pts[n] = max_pts[n].max(aligned_cloud[i].bottomLeftCorner(2, 1).array());
@@ -262,7 +262,7 @@ private:
 
   std::vector<float> intensityDistribution(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& centered_cloud, int hist_n = 25) const {
     Eigen::ArrayXf intensity(centered_cloud->size());
-    for (int i = 0; i < centered_cloud->size(); i++) {
+    for (size_t i = 0; i < centered_cloud->size(); i++) {
       intensity[i] = centered_cloud->at(i).intensity;
     }
 

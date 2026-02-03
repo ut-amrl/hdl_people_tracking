@@ -20,7 +20,7 @@ public:
       cloud(cloud)
   {
     min_pt = max_pt = cloud->at(0).getArray3fMap();
-    for(int i=1; i<cloud->size(); i++) {
+    for(size_t i=1; i<cloud->size(); i++) {
       min_pt = cloud->at(i).getArray3fMap().min(min_pt);
       max_pt = cloud->at(i).getArray3fMap().max(max_pt);
     }

@@ -19,9 +19,9 @@ public:
     : min_dist(min_dist),
     min_n_pt(min_n_pt),
     max_n_pt(max_n_pt),
+    cluster_tolerance(cluster_tolerance),
     min_size(min_size),
-    max_size(max_size),
-    cluster_tolerance(cluster_tolerance)
+    max_size(max_size)
   {
   }
 
@@ -29,7 +29,7 @@ public:
     pcl::PointCloud<pcl::PointXYZI>::Ptr scaled(new pcl::PointCloud<pcl::PointXYZI>());
     scaled->resize(src_cloud->size());
     Eigen::Array3f scale(1.0f, 1.0f, 0.01f);
-    for(int i=0; i<src_cloud->size(); i++) {
+    for(size_t i=0; i<src_cloud->size(); i++) {
       scaled->at(i).getArray3fMap() = src_cloud->at(i).getArray3fMap() * scale;
     }
     scaled->width = scaled->size();
@@ -43,7 +43,7 @@ public:
 
     std::vector<Cluster::Ptr> clusters;
     clusters.reserve(24);
-    for (int i = 0; i < cluster_indices.size(); i++) {
+    for (size_t i = 0; i < cluster_indices.size(); i++) {
       pcl::PointIndices::Ptr indices(new pcl::PointIndices(cluster_indices[i]));
       pcl::PointCloud<pcl::PointXYZI>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZI>());
       pcl::ExtractIndices<pcl::PointXYZI> extract;

@@ -60,7 +60,7 @@ public:
 
   cv::Mat scaling(const cv::Mat& feature) const {
     cv::Mat scaled(feature.size(), 1, CV_32FC1);
-    for (size_t i = 0; i<feature.rows; i++) {
+    for (int i = 0; i<feature.rows; i++) {
       scaled.at<float>(i) = offsetScale[i][0] + feature.at<float>(i) * offsetScale[i][1];
     }
 

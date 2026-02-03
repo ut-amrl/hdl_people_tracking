@@ -52,24 +52,24 @@ public:
 private:
   // update centroids acoording to labels
   bool updateCentroids(const std::vector<VectorTd>& x, T criteria) {
-    int k = centroids.size();
+    size_t k = centroids.size();
     std::vector<int> accums(k, 0);
     std::vector<VectorTd> new_centroids(k);
     std::for_each(new_centroids.begin(), new_centroids.end(), [=](VectorTd& centroid) { centroid.setZero(); });
 
     // update centrods
-    for (int i = 0; i < x.size(); i++) {
+    for (size_t i = 0; i < x.size(); i++) {
       accums[labels[i]]++;
       new_centroids[labels[i]] += x[i];
     }
-    for (int i = 0; i < k; i++) {
+    for (size_t i = 0; i < k; i++) {
       new_centroids[i] /= std::max( 1, accums[i] );
     }
 
     centroids.swap(new_centroids);
 
     // check if converged
-    for (int i = 0; i < centroids.size(); i++) {
+    for (size_t i = 0; i < centroids.size(); i++) {
       if ((centroids[i] - new_centroids[i]).squaredNorm() > criteria * criteria) {
         return false;
       }
@@ -83,12 +83,12 @@ private:
     bool is_converged = true;
     bool k_incremented = false;
     // for each point
-    for (int i = 0; i < x.size(); i++) {
+    for (size_t i = 0; i < x.size(); i++) {
       T min_d = (centroids[0] - x[i]).squaredNorm();
       int min_label = 0;
 
       // find the closest centroid
-      for (int j = 1; j < centroids.size(); j++) {
+      for (size_t j = 1; j < centroids.size(); j++) {
         T d = (centroids[j] - x[i]).squaredNorm();
         if (d < min_d) {
           min_d = d;

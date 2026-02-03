@@ -33,8 +33,8 @@ public:
     std::vector<Association> all_associations;
     all_associations.reserve(trackers.size() * 2);
 
-    for(int i=0; i<trackers.size(); i++) {
-      for(int j=0; j<observations.size(); j++) {
+    for(size_t i=0; i<trackers.size(); i++) {
+      for(size_t j=0; j<observations.size(); j++) {
         auto dist = distance<Tracker, Observation>(trackers[i], observations[j]);
         if(dist) {
           all_associations.push_back(Association(i, j, dist.get()));

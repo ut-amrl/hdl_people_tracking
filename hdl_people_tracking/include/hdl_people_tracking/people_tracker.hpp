@@ -77,7 +77,7 @@ public:
     }
 
     // generate new tracks
-    for(int i=0; i<detections.size(); i++) {
+    for(size_t i=0; i<detections.size(); i++) {
       if(!associated[i]) {
         // check if the detection is far from existing tracks
         const auto& observation = detections[i].centroid;
