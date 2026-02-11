@@ -23,6 +23,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
+cmake_policy(SET CMP0074 NEW)
 find_package(PCL REQUIRED COMPONENTS common io filters kdtree search sample_consensus segmentation extract)
 find_package(OpenCV REQUIRED)
 
@@ -94,6 +95,10 @@ install(DIRECTORY data
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS scripts/dummy_map_publisher.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_export_include_directories(include)

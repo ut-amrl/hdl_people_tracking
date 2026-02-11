@@ -58,7 +58,7 @@ public:
     }
 
     Eigen::Array3f extents = (max_pos - min_pos).array().abs();
-    grid_size = (extents * inverse_voxel_size.array()).unaryExpr([=](float v) { return ceil(v); }).cast<int>();
+    grid_size = (extents * inverse_voxel_size.array()).unaryExpr([=](float v) { return floor(v) + 1; }).cast<int>();
     occupancy_map.resize(int(grid_size[0] * grid_size[1] * grid_size[2]));
 
     addBackgroundCloud(bg_cloud);
@@ -70,7 +70,11 @@ public:
    */
   void addBackgroundCloud(pcl::PointCloud<pcl::PointXYZI>::ConstPtr bg_cloud) {
     for (auto pt = bg_cloud->begin(); pt != bg_cloud->end(); pt++) {
-      int i = getMapIndex(getVoxelIndex(*pt));
+        Eigen::Vector3i voxel_index = getVoxelIndex(*pt);
+        if((voxel_index.array() < 0).any() || (voxel_index.array() >= grid_size).any()) {
+            continue;
+        }
+      int i = getMapIndex(voxel_index);
       occupancy_map.coeffRef(i) ++;
     }
   }

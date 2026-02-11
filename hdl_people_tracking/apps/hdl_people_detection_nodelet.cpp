@@ -71,6 +71,8 @@ private:
    */
   void initialize_params() {
     double downsample_resolution = this->declare_parameter<double>("downsample_resolution", 0.1);
+    backsub_resolution_ = this->declare_parameter<double>("backsub_resolution", 0.2);
+    backsub_occupancy_thresh_ = this->declare_parameter<int>("backsub_occupancy_thresh", 2);
     std::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
     voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
     downsample_filter = voxelgrid;
@@ -84,6 +86,7 @@ private:
    * @param points_msg
    */
   void callback_static(const sensor_msgs::msg::PointCloud2::SharedPtr points_msg) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Callback is running! Input cloud size: %d", points_msg->width * points_msg->height);
     if(!globalmap) {
       RCLCPP_INFO(this->get_logger(), "constructing globalmap from a points msg");
       globalmap_callback(points_msg);
@@ -159,13 +162,24 @@ private:
     pcl::fromROSMsg(*points_msg, *cloud);
     globalmap = cloud;
 
-    RCLCPP_INFO(this->get_logger(), "background subtractor constructed");
-    double backsub_resolution = this->declare_parameter<double>("backsub_resolution", 0.2);
-    int backsub_occupancy_thresh = this->declare_parameter<int>("backsub_occupancy_thresh", 2);
+    // RCLCPP_INFO(this->get_logger(), "background subtractor constructed");
+    // double backsub_resolution;
+    // if (!this->has_parameter("backsub_resolution")) {
+    //   backsub_resolution = this->declare_parameter<double>("backsub_resolution", 0.2);
+    // } else {
+    //   this->get_parameter("backsub_resolution", backsub_resolution);
+    // }
+
+    // int backsub_occupancy_thresh;
+    // if (!this->has_parameter("backsub_occupancy_thresh")) {
+    //   backsub_occupancy_thresh = this->declare_parameter<int>("backsub_occupancy_thresh", 2);
+    // } else {
+    //   this->get_parameter("backsub_occupancy_thresh", backsub_occupancy_thresh);
+    // }
 
     backsub.reset(new hdl_people_detection::BackgroundSubtractor());
-    backsub->setVoxelSize(backsub_resolution, backsub_resolution, backsub_resolution);
-    backsub->setOccupancyThresh(backsub_occupancy_thresh);
+    backsub->setVoxelSize(backsub_resolution_, backsub_resolution_, backsub_resolution_);
+    backsub->setOccupancyThresh(backsub_occupancy_thresh_);
     backsub->setBackgroundCloud(globalmap);
 
     backsub_voxel_markers_pub->publish(*backsub->create_voxel_marker());
@@ -185,7 +199,7 @@ private:
    * @param clusters
    */
   void publish_msgs(const rclcpp::Time& stamp, const pcl::PointCloud<pcl::PointXYZI>::Ptr& filtered, const std::vector<hdl_people_detection::Cluster::Ptr>& clusters) const {
-    if(clusters_pub->get_subscription_count() > 0) {
+    // if(clusters_pub->get_subscription_count() > 0) {
       hdl_people_tracking::msg::ClusterArray clusters_msg;
       clusters_msg.header.frame_id = globalmap->header.frame_id;
       clusters_msg.header.stamp = stamp;
@@ -212,17 +226,17 @@ private:
       }
 
       clusters_pub->publish(clusters_msg);
-    }
+    // }
 
-    if(backsub_points_pub->get_subscription_count() > 0) {
+    // if(backsub_points_pub->get_subscription_count() > 0) {
       sensor_msgs::msg::PointCloud2 ros_cloud;
       pcl::toROSMsg(*filtered, ros_cloud);
       ros_cloud.header.stamp = stamp;
       ros_cloud.header.frame_id = globalmap->header.frame_id;
       backsub_points_pub->publish(ros_cloud);
-    }
+    // }
 
-    if(cluster_points_pub->get_subscription_count() > 0) {
+    // if(cluster_points_pub->get_subscription_count() > 0) {
       pcl::PointCloud<pcl::PointXYZI>::Ptr accum(new pcl::PointCloud<pcl::PointXYZI>());
       for(const auto& cluster : clusters) {
         std::copy(cluster->cloud->begin(), cluster->cloud->end(), std::back_inserter(accum->points));
@@ -231,15 +245,15 @@ private:
       accum->height = 1;
       accum->is_dense = false;
 
-      sensor_msgs::msg::PointCloud2 ros_cloud;
-      pcl::toROSMsg(*accum, ros_cloud);
+      // sensor_msgs::msg::PointCloud2 ros_cloud;
+      // pcl::toROSMsg(*accum, ros_cloud);
       ros_cloud.header.stamp = stamp;
       ros_cloud.header.frame_id = globalmap->header.frame_id;
       cluster_points_pub->publish(ros_cloud);
-    }
+    // }
 
-    if(human_points_pub->get_subscription_count() > 0) {
-      pcl::PointCloud<pcl::PointXYZI>::Ptr accum(new pcl::PointCloud<pcl::PointXYZI>());
+    // if(human_points_pub->get_subscription_count() > 0) {
+      // pcl::PointCloud<pcl::PointXYZI>::Ptr accum(new pcl::PointCloud<pcl::PointXYZI>());
       for(const auto& cluster : clusters) {
         if(cluster->is_human){
           std::copy(cluster->cloud->begin(), cluster->cloud->end(), std::back_inserter(accum->points));
@@ -249,16 +263,16 @@ private:
       accum->height = 1;
       accum->is_dense = false;
 
-      sensor_msgs::msg::PointCloud2 ros_cloud;
-      pcl::toROSMsg(*accum, ros_cloud);
+      // sensor_msgs::msg::PointCloud2 ros_cloud;
+      // pcl::toROSMsg(*accum, ros_cloud);
       ros_cloud.header.stamp = stamp;
       ros_cloud.header.frame_id = globalmap->header.frame_id;
       human_points_pub->publish(ros_cloud);
-    }
+    // }
 
-    if(detection_markers_pub->get_subscription_count() > 0) {
+    // if(detection_markers_pub->get_subscription_count() > 0) {
       detection_markers_pub->publish(create_markers(stamp, clusters));
-    }
+    // }
   }
 
   visualization_msgs::msg::MarkerArray create_markers(const rclcpp::Time& stamp, const std::vector<hdl_people_detection::Cluster::Ptr>& clusters) const {
@@ -324,6 +338,9 @@ private:
   pcl::Filter<PointT>::Ptr downsample_filter;
   std::unique_ptr<hdl_people_detection::BackgroundSubtractor> backsub;
   std::unique_ptr<hdl_people_detection::PeopleDetector> detector;
+
+  double backsub_resolution_;
+  int backsub_occupancy_thresh_;
 
 };
 

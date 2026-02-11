@@ -38,7 +38,7 @@ bool KidonoHumanClassifier::predict(const pcl::PointCloud<pcl::PointXYZI>::Const
   auto feature = extractor.extract(cloud);
   auto scaled = scale.scaling(feature);
 
-  return boost->predict(scaled) > 0.0f;
+  return boost->predict(scaled.t()) > 0.0f;
 }
 
 }
